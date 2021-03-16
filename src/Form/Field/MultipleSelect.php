@@ -27,8 +27,15 @@ class MultipleSelect extends Select
         if ($this->otherKey) {
             return $this->otherKey;
         }
-
-        if (is_callable([$this->form->model(), $this->column]) &&
+        /**
+         * If we don't have a method of the parent model, assume that this is a nested relationship
+         * This appears to work but may not hold up in all cases
+         */
+        if (!method_exists($this->form->model(), $this->column)) {
+            return \Str::singular($this->column).'_id';
+        }
+        if (
+            is_callable([$this->form->model(), $this->column]) &&
             ($relation = $this->form->model()->{$this->column}()) instanceof BelongsToMany
         ) {
             /* @var BelongsToMany $relation */

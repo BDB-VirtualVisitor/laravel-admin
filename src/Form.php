@@ -815,9 +815,20 @@ class Form implements Renderable
 
                         Arr::forget($related, static::REMOVE_FLAG_NAME);
 
-                        $child->fill($related);
-
-                        $child->save();
+                        if (is_array(current($related))) {
+                            $property = current(array_keys($related));
+                            /**
+                            * NEW: make sure we save belongsToMany fields.
+                            * For example, SceneItem::regions()
+                            **/
+                            if (get_class($child->{$property}()) == "Illuminate\Database\Eloquent\Relations\BelongsToMany") {
+                                $child->{$property}()->sync($related[$property]);                                
+                            }
+                        } else {
+                            $child->fill($related);
+                            $child->save();
+                        }
+                        
                     }
                     break;
             }
@@ -1026,6 +1037,43 @@ class Form implements Renderable
             $builder = $builder->withTrashed();
         }
 
+        /**
+         * Add any nested belongsToMany relationships to the lazy loading array too
+         * This is necessary if we want to manage these fields as part of a nested form
+         * We need to establish that (eg) "scene_items" is a relationship between
+         * Scene and SceneItem, and that a SceneItem has a belongsToMany relationship (eg regions)
+         */
+        $this->fields()->each(function (Field $field) use (&$relations, $builder, $id) {
+            if (in_array($field->column(), $relations)) {
+                /**
+                 * Will this fail if a model doesn't have any related items? I assume so.
+                 */
+                $related_model = $builder->first()->{$field->column()}->first();
+                $class      = get_class($related_model);
+                $reflection = new \ReflectionClass($class);
+                foreach ($reflection->getMethods() as $method) {
+                    
+                    if (
+                        $method->class != $class // Exclude methods inherited from the parent class:
+                        ||
+                        $method->getParameters() // Exclude methods that require parameters
+                        || 
+                        !$method->isPublic() // exclude protected or private methods:
+                        || 
+                        $method->name == 'getReleated' // exclude an odd VV method that propagates to other methods                        
+                    ) {                        
+                        continue;
+                    }
+                    if (method_exists($class, $method->name) &&
+                        $related_model->{$method->name}() instanceof Relations\Relation &&
+                        get_class($related_model->{$method->name}()) == 'Illuminate\Database\Eloquent\Relations\BelongsToMany'
+                    ) {
+                        $relations[] = $field->column().'.'.$method->name;
+                    }
+                }
+            }
+        });
+        
         $this->model = $builder->with($relations)->findOrFail($id);
 
         $this->callEditing();
