@@ -1045,30 +1045,29 @@ class Form implements Renderable
          */
         $this->fields()->each(function (Field $field) use (&$relations, $builder, $id) {
             if (in_array($field->column(), $relations)) {
-                /**
-                 * Will this fail if a model doesn't have any related items? I assume so.
-                 */
                 $related_model = $builder->first()->{$field->column()}->first();
-                $class      = get_class($related_model);
-                $reflection = new \ReflectionClass($class);
-                foreach ($reflection->getMethods() as $method) {
-                    
-                    if (
-                        $method->class != $class // Exclude methods inherited from the parent class:
-                        ||
-                        $method->getParameters() // Exclude methods that require parameters
-                        || 
-                        !$method->isPublic() // exclude protected or private methods:
-                        || 
-                        $method->name == 'getReleated' // exclude an odd VV method that propagates to other methods                        
-                    ) {                        
-                        continue;
-                    }
-                    if (method_exists($class, $method->name) &&
-                        $related_model->{$method->name}() instanceof Relations\Relation &&
-                        get_class($related_model->{$method->name}()) == 'Illuminate\Database\Eloquent\Relations\BelongsToMany'
-                    ) {
-                        $relations[] = $field->column().'.'.$method->name;
+                if (!is_null($related_model)) {
+                    $class      = get_class($related_model);
+                    $reflection = new \ReflectionClass($class);
+                    foreach ($reflection->getMethods() as $method) {
+                        
+                        if (
+                            $method->class != $class // Exclude methods inherited from the parent class:
+                            ||
+                            $method->getParameters() // Exclude methods that require parameters
+                            || 
+                            !$method->isPublic() // exclude protected or private methods:
+                            || 
+                            $method->name == 'getReleated' // exclude an odd VV method that propagates to other methods                        
+                        ) {                        
+                            continue;
+                        }
+                        if (method_exists($class, $method->name) &&
+                            $related_model->{$method->name}() instanceof Relations\Relation &&
+                            get_class($related_model->{$method->name}()) == 'Illuminate\Database\Eloquent\Relations\BelongsToMany'
+                        ) {
+                            $relations[] = $field->column().'.'.$method->name;
+                        }
                     }
                 }
             }
