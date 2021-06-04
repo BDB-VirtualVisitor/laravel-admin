@@ -815,14 +815,23 @@ class Form implements Renderable
 
                         Arr::forget($related, static::REMOVE_FLAG_NAME);
 
-                        if (is_array(current($related))) {
-                            $property = current(array_keys($related));
+                        /**
+                         * NEW: don't treat translated content (eg anything with an 'en' key) as a relationship
+                         */
+                        if (is_array(current($related)) && !array_key_exists('en', current($related))) {
+                            
                             /**
-                            * NEW: make sure we save belongsToMany fields.
-                            * For example, SceneItem::regions()
-                            **/
-                            if (get_class($child->{$property}()) == "Illuminate\Database\Eloquent\Relations\BelongsToMany") {
-                                $child->{$property}()->sync($related[$property]);                                
+                             * NEW: we might be posting multiple related fields within a nested form...
+                             */
+                            // $property = current(array_keys($related));
+                            foreach (array_keys($related) as $property) {
+                                /**
+                                * NEW: make sure we save belongsToMany fields.
+                                * For example, SceneItem::regions()
+                                **/
+                                if (get_class($child->{$property}()) == "Illuminate\Database\Eloquent\Relations\BelongsToMany") {
+                                    $child->{$property}()->sync($related[$property]);                                
+                                }
                             }
                         } else {
                             $child->fill($related);
