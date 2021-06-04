@@ -823,14 +823,21 @@ class Form implements Renderable
                             /**
                              * NEW: we might be posting multiple related fields within a nested form...
                              */
-                            // $property = current(array_keys($related));
+                            
                             foreach (array_keys($related) as $property) {
-                                /**
-                                * NEW: make sure we save belongsToMany fields.
-                                * For example, SceneItem::regions()
-                                **/
-                                if (get_class($child->{$property}()) == "Illuminate\Database\Eloquent\Relations\BelongsToMany") {
-                                    $child->{$property}()->sync($related[$property]);                                
+
+                                 /**
+                                 * NEW: Only process relationships here
+                                 */
+                                if (method_exists($child, $property)) {
+
+                                    /**
+                                    * NEW: make sure we save belongsToMany fields.
+                                    * For example, SceneItem::regions()
+                                    **/
+                                    if (get_class($child->{$property}()) == "Illuminate\Database\Eloquent\Relations\BelongsToMany") {
+                                        $child->{$property}()->sync($related[$property]);                                
+                                    }
                                 }
                             }
                         } else {
