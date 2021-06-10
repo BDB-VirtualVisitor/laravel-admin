@@ -840,10 +840,10 @@ class Form implements Renderable
                                     }
                                 }
                             }
-                        } else {
-                            $child->fill($related);
-                            $child->save();
                         }
+
+                        $child->fill($related);
+                        $child->save();
                         
                     }
                     break;

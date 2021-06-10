@@ -32,7 +32,22 @@ class MultipleSelect extends Select
          * This appears to work but may not hold up in all cases
          */
         if (!method_exists($this->form->model(), $this->column)) {
-            return \Str::singular($this->column).'_id';
+            /**
+             * Patch in a VERY VV-specific hack here, which allows us to identify (eg)
+             * the "role_id" column of the "excludedRoles" relationship. I don't believe
+             * we can do this in a more intelligent, programmatic way, because we don't appear
+             * to have any knowledge of the "child model" (ie, the nested mode/form) at this stage
+             */
+            if (strpos($this->column, 'excluded') === 0) {
+                $otherKey = strtolower(
+                            \Str::singular(
+                                str_replace('excluded', '', $this->column)                                
+                            )
+                        ).'_id';
+            } else {
+                $otherKey = \Str::singular($this->column).'_id';
+            }
+            return $otherKey;
         }
         if (
             is_callable([$this->form->model(), $this->column]) &&
